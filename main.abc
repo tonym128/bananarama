@@ -1,0 +1,147 @@
+#shades "4"
+
+constexpr sprites BANANA4 = sprites{ 4x4 "media/banana4.png" };
+constexpr sprites BANANA8 = sprites{ 8x8 "media/banana8.png" };
+constexpr sprites BANANA12 = sprites{ 12x12 "media/banana12.png" };
+constexpr sprites BANANA16 = sprites{ 16x16 "media/banana16.png" };
+constexpr sprites BANANA20 = sprites{ 20x20 "media/banana20.png" };
+constexpr sprites BANANA24 = sprites{ 24x24 "media/banana24.png" };
+constexpr sprites BANANA28 = sprites{ 28x28 "media/banana28.png" };
+constexpr sprites BANANA32 = sprites{ 32x32 "media/banana32.png" };
+
+int screen = 0;
+bool grow = 0;
+u32 milli = 0;
+saved bool save_exists;
+saved u32 save_score;
+
+struct banana {
+    int x;
+    int y;
+    bool dx;
+    bool dy;
+    u8 size;
+    bool ds;
+};
+
+banana[15] bananas = {
+    {0,0,0,0,0,0},
+    {0,0,0,0,0,0},
+    {0,0,0,0,0,0},
+    {0,0,0,0,0,0},
+    {0,0,0,0,0,0},
+    {0,0,0,0,0,0},
+    {0,0,0,0,0,0},
+    {0,0,0,0,0,0},
+    {0,0,0,0,0,0},
+    {0,0,0,0,0,0},
+};
+
+void drawBananas() {
+    if ($millis() > milli+333) {
+        milli = $millis();
+        grow = true;
+    }
+    
+    for (int i = 0; i<15; i++) {
+        if (grow) {
+            if (bananas[i].ds) {
+                bananas[i].size -= 1;
+            } else {
+                bananas[i].size += 1;
+            }
+        }
+        
+        if (bananas[i].size == 7) {
+            bananas[i].ds = 1;
+            }
+        else if (bananas[i].size == 0) {
+            bananas[i].ds = 0;
+            }
+
+        if (bananas[i].dx) {
+            bananas[i].x = bananas[i].x + 1;
+        } else {
+            bananas[i].x = bananas[i].x - 1;
+        }
+        if (bananas[i].x > 128-16) { 
+            bananas[i].dx = !bananas[i].dx;
+            bananas[i].x = 128-16;
+        }
+        if (bananas[i].x < 0) {
+            bananas[i].dx = !bananas[i].dx;
+            bananas[i].x = 0;
+        }
+    
+        if (bananas[i].dy) {
+            bananas[i].y = bananas[i].y + 1;
+        } else {
+            bananas[i].y = bananas[i].y - 1;
+        }
+
+        if (bananas[i].y > 64-16) { 
+            bananas[i].dy = !bananas[i].dy;
+            bananas[i].y = 64-16;
+        }
+        if (bananas[i].y < 0) {
+            bananas[i].dy = !bananas[i].dy;
+            bananas[i].y = 0;
+        }
+        
+        switch (bananas[i].size) {
+            case(0) $draw_sprite(bananas[i].x+14,bananas[i].y+14, BANANA4, 0);
+            case(1) $draw_sprite(bananas[i].x+12,bananas[i].y+12, BANANA8, 0);
+            case(2) $draw_sprite(bananas[i].x+10,bananas[i].y+10, BANANA12, 0);
+            case(3) $draw_sprite(bananas[i].x+8,bananas[i].y+8, BANANA16, 0);
+            case(4) $draw_sprite(bananas[i].x+6,bananas[i].y+6, BANANA20, 0);
+            case(5) $draw_sprite(bananas[i].x+4,bananas[i].y+4, BANANA24, 0);
+            case(6) $draw_sprite(bananas[i].x+2,bananas[i].y+2, BANANA28, 0);
+            case(7) $draw_sprite(bananas[i].x,bananas[i].y, BANANA32, 0);
+        }
+    }
+    
+    grow = false;
+}
+
+void setup() {
+    for (int i = 0; i<15; i++) {
+        bananas[i].x = $random_range(0,128);
+        bananas[i].y = $random_range(0,64);
+        bananas[i].dx = $random_range(0,2);
+        bananas[i].dy = $random_range(0,2);
+        bananas[i].size = $random_range(0,8);
+        bananas[i].ds = $random_range(0,2);
+    }
+}
+
+void main()
+{
+   $generate_random_seed();
+   $init_random_seed();
+   $set_frame_rate(30);
+   setup();
+   if (!$load()) {
+    save_exists = 1;
+    save_score = 0;
+    $save();
+    }
+      
+   while(1) {
+        if (screen == 0) {
+            drawBananas();
+            $draw_text_P(30, 32,"Bananarama");
+            $draw_textf(1, 10,"High:%d", save_score);
+            if ($millis()/1000 % 2 == 0) {
+                $draw_text_P(0, 48,"Press Button to Start");
+            }
+        
+        }
+   if ($just_pressed(A_BUTTON)) {
+       save_score += 1;
+       $save();
+   }
+   
+   $display();
+    
+   }
+}
