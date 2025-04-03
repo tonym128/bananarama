@@ -31,6 +31,17 @@ struct banana {
     bool ds;
 };
 
+struct gameRow {
+    u8 distance;
+    u8 col0;
+    u8 col1;   
+    u8 col2;   
+};
+
+gameRow[10] gameRows = {
+{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},
+};
+
 banana[15] bananas = {
     {0,0,0,0,0,0},
     {0,0,0,0,0,0},
@@ -188,7 +199,7 @@ void draw_wall(u8 column, u8 distance, u8 color)
     $draw_filled_rect((column-1)*size + x,y,size,size,color);
 }
 
-void game_setup() 
+void game_start_setup() 
 {
     screen++;
     score = 0;
@@ -197,6 +208,7 @@ void game_setup()
 
 void game_start() {
     u32 mill = $millis() - milli;
+    
     int seconds = mill/1000;
     int sizeX = 128 - (mill)%1000/8;
     int sizeY = sizeX/2;
@@ -206,6 +218,9 @@ void game_start() {
 
     if (seconds >= 3) {
         screen++;
+        milli = $millis();
+        milliSpawn = $millis();
+        return;
     }
 
     $set_text_color(DARK_GRAY);
@@ -230,22 +245,118 @@ void game_start() {
     }
 }
 
-int wall1 = 32;
+int moveTick = 100;
+int milliSpawn = 0;
+int spawnTick = 32*moveTick;
+
+void game_create_row(int row) {
+    u8 max_walls = 1;
+    if (score > 20) {
+        max_walls = 2;
+    }
+    
+    gameRows[row] = {32,0,0,0};
+
+    u8 banana = $random_range(0,5);
+    if (banana == 0) {
+        u8 column = $random_range(0,3);
+        gameRows[row].col0 = 1;
+    }
+
+    u8 walls = $random_range(0,2);
+    for (int i = 0; i < walls; i++) {
+        u8 column = $random_range(0,3);
+        u8 color = $random_range(0,3);
+        switch (column) {
+            case(0) gameRows[row].col0 = 2+color;
+            case(1) gameRows[row].col1 = 2+color;
+            case(2) gameRows[row].col2 = 2+color;
+        }
+    }
+}
+
+void game_update() {
+    // Move the walls
+    u32 millMove = $millis() - milli;
+    if (millMove > moveTick) {
+        milli = $millis();
+        for (int i = 0; i < 10; i++) {
+            if (gameRows[i].distance > 0) {
+                if (gameRows[i].distance <= 32) {
+                    gameRows[i].distance--;
+                }
+            }
+        }
+    }
+
+    // Spawn new walls
+    u32 millSpawn = $millis() - milliSpawn;
+
+    if (millSpawn > spawnTick) {
+        milliSpawn = $millis();
+        for (int i = 0; i < 10; i++) {
+            if (gameRows[i].distance == 0) {
+                game_create_row(i);
+                return;
+            }
+        }
+    }
+
+    // Check for any collisions
+    // TODO
+}
+
+void draw_row_col(int distance, int col, int val) {
+    switch (val) {
+        case(1) draw_banana(col, distance);
+        case(2) draw_wall(col, distance, GRAY);
+        case(3) draw_wall(col, distance, DARK_GRAY);
+        case(4) draw_wall(col, distance, WHITE);
+    }
+}
+
+void game_setup() 
+{
+    $generate_random_seed();
+    $init_random_seed();
+    $set_frame_rate(30);
+
+    screen++;
+    score = 0;
+    milli = $millis();
+    milliSpawn = $millis();
+}
+
+void game_input() {
+    // Take player input
+    // TODO
+    
+//    if ($just_pressed(A_BUTTON)) {
+//    }
+}
 
 void game() {
-    $set_text_color(DARK_GRAY);
-    $draw_textf(1, 10,"High:%d", save_score);
-
-    draw_wall(0,wall1,LIGHT_GRAY);
-    draw_wall(1,wall1,DARK_GRAY);
-    draw_wall(2,wall1,LIGHT_GRAY);
-    draw_banana(0,wall1);
-    draw_banana(1,wall1);
-    draw_banana(2,wall1);
-
-    if ($just_pressed(A_BUTTON)) {
-        wall1 -= 1;
+    game_input();
+    game_update();
+    
+    // Draw Rows
+    // TODO Some sort of display list sort
+    for (int i = 0; i < 10; i++) {
+        if (gameRows[i].distance > 0) {
+            if (gameRows[i].distance <= 32) {
+                draw_row_col(gameRows[i].distance, 0, gameRows[i].col0);
+                draw_row_col(gameRows[i].distance, 1, gameRows[i].col1);
+                draw_row_col(gameRows[i].distance, 2, gameRows[i].col2);
+            }
+        }
     }
+    
+    // TODO Draw Player
+    
+    // Draw Scores
+    $set_text_color(DARK_GRAY);
+    $draw_textf(1, 10,"Score:%d", score);
+    $draw_textf(80, 10,"High:%d", save_score);
     
 }
 
@@ -276,11 +387,12 @@ void main()
         switch (screen) {
             case(0) main_menu_setup();
             case(1) main_menu();
-            case(2) game_setup();
+            case(2) game_start_setup();
             case(3) game_start();
-            case(4) game();
-            case(5) end_game_start();
-            case(6) end_game();
+            case(4) game_setup();
+            case(5) game();
+            case(6) end_game_start();
+            case(7) end_game();
         }
         $display();
     }    
