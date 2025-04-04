@@ -6,6 +6,7 @@
 #sourceUrl "https://github.com/tonym128/bananarama"
 #shades "4"
 
+constexpr sprites BACKGROUND = sprites{ 128x64 "media/back.png" };
 constexpr sprites BANANA4 = sprites{ 4x4 "media/banana4.png" };
 constexpr sprites BANANA8 = sprites{ 8x8 "media/banana8.png" };
 constexpr sprites BANANA12 = sprites{ 12x12 "media/banana12.png" };
@@ -21,6 +22,11 @@ u32 milli = 0;
 saved bool save_exists;
 saved u32 save_score;
 u32 score = 0;
+u8 playerCol = 0;
+u8 playerPos = 32;
+u8 player0Pos = 0;
+u8 player1Pos = 48;
+u8 player2Pos = 96;
 
 struct banana {
     int x;
@@ -38,11 +44,11 @@ struct gameRow {
     u8 col2;   
 };
 
-gameRow[10] gameRows = {
-{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},
+gameRow[5] gameRows = {
+{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},
 };
 
-banana[15] bananas = {
+banana[10] bananas = {
     {0,0,0,0,0,0},
     {0,0,0,0,0,0},
     {0,0,0,0,0,0},
@@ -61,7 +67,7 @@ void drawBananas() {
         grow = true;
     }
     
-    for (int i = 0; i<15; i++) {
+    for (int i = 0; i<10; i++) {
         if (grow) {
             if (bananas[i].ds) {
                 bananas[i].size -= 1;
@@ -126,7 +132,7 @@ void setup() {
     $init_random_seed();
     $set_frame_rate(30);
 
-    for (int i = 0; i<15; i++) {
+    for (int i = 0; i<10; i++) {
         bananas[i].x = $random_range(0,128);
         bananas[i].y = $random_range(0,64);
         bananas[i].dx = $random_range(0,2);
@@ -219,7 +225,6 @@ void game_start() {
     if (seconds >= 3) {
         screen++;
         milli = $millis();
-        milliSpawn = $millis();
         return;
     }
 
@@ -245,9 +250,9 @@ void game_start() {
     }
 }
 
-int moveTick = 100;
-int milliSpawn = 0;
-int spawnTick = 32*moveTick;
+int moveTick = 0;
+int spawnTicker = 0;
+int spawnTicks = 0;
 
 void game_create_row(int row) {
     u8 max_walls = 1;
@@ -255,8 +260,12 @@ void game_create_row(int row) {
         max_walls = 2;
     }
     
-    gameRows[row] = {32,0,0,0};
-
+    // gameRows[row] = {32,0,0,0};
+    gameRows[row].distance = 32;
+    gameRows[row].col0 = 0;
+    gameRows[row].col1 = 0;
+    gameRows[row].col2 = 0;
+    
     u8 banana = $random_range(0,5);
     if (banana == 0) {
         u8 column = $random_range(0,3);
@@ -280,7 +289,8 @@ void game_update() {
     u32 millMove = $millis() - milli;
     if (millMove > moveTick) {
         milli = $millis();
-        for (int i = 0; i < 10; i++) {
+        spawnTicker++;
+        for (int i = 0; i < 5; i++) {
             if (gameRows[i].distance > 0) {
                 if (gameRows[i].distance <= 32) {
                     gameRows[i].distance--;
@@ -290,16 +300,22 @@ void game_update() {
     }
 
     // Spawn new walls
-    u32 millSpawn = $millis() - milliSpawn;
 
-    if (millSpawn > spawnTick) {
-        milliSpawn = $millis();
-        for (int i = 0; i < 10; i++) {
+    if (spawnTicker > spawnTicks) {
+        spawnTicker = 0;
+        for (int i = 0; i < 5; i++) {
             if (gameRows[i].distance == 0) {
                 game_create_row(i);
-                return;
+                break;
             }
         }
+    }
+    
+    // move the player
+    switch (playerPos) {
+        case(0) update_player(player0Pos);
+        case(1) update_player(player1Pos);
+        case(2) update_player(player2Pos);
     }
 
     // Check for any collisions
@@ -322,26 +338,67 @@ void game_setup()
     $set_frame_rate(30);
 
     screen++;
+    
+    // Starting values
     score = 0;
     milli = $millis();
-    milliSpawn = $millis();
+    spawnTicker = 20;
+    spawnTicks = 32; 
+    moveTick = 100;
+    playerCol = 0;
+    playerPos = player1Pos;
 }
 
 void game_input() {
     // Take player input
-    // TODO
-    
+    bool canMove = true;
+    switch (playerPos) {
+        case(0) canMove = true;
+        case(48) canMove = true;
+        case(96) canMove = true;
+    }
+
+    if (canMove) {
+        if ($just_pressed(LEFT_BUTTON)) {
+            if (playerCol > 0) {
+                playerCol--;
+            }
+        }
+        else if ($just_pressed(RIGHT_BUTTON)) {
+            if (playerCol < 2) {
+                playerCol++;
+            }
+        }
+    }
 //    if ($just_pressed(A_BUTTON)) {
 //    }
+}
+
+void update_player(int dPos) {
+    if (dPos != playerPos) {
+        if (dPos < playerPos) {
+            playerPos--;
+        }
+        else if (dPos > playerPos) {
+            playerPos++;
+        }
+    }
+}
+
+void draw_player() {
+        $draw_filled_rect(playerPos,32,32,32,WHITE);
 }
 
 void game() {
     game_input();
     game_update();
     
+    // Draw Lanes
+    $draw_sprite(0,0, BACKGROUND, 0);
+
     // Draw Rows
     // TODO Some sort of display list sort
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 5; i++) {
         if (gameRows[i].distance > 0) {
             if (gameRows[i].distance <= 32) {
                 draw_row_col(gameRows[i].distance, 0, gameRows[i].col0);
@@ -351,8 +408,8 @@ void game() {
         }
     }
     
-    // TODO Draw Player
-    
+    // Draw Player
+    draw_player();
     // Draw Scores
     $set_text_color(DARK_GRAY);
     $draw_textf(1, 10,"Score:%d", score);
