@@ -15,6 +15,8 @@ constexpr sprites BANANA20 = sprites{ 20x20 "media/banana20.png" };
 constexpr sprites BANANA24 = sprites{ 24x24 "media/banana24.png" };
 constexpr sprites BANANA28 = sprites{ 28x28 "media/banana28.png" };
 constexpr sprites BANANA32 = sprites{ 32x32 "media/banana32.png" };
+constexpr sprites STEPL = sprites{ 24x24 "media/monkey24sl.png" };
+constexpr sprites STEPR = sprites{ 24x24 "media/monkey24sr.png" };
 
 int screen = 4;
 bool grow = 0;
@@ -22,7 +24,7 @@ u32 milli = 0;
 saved bool save_exists;
 saved u32 save_score;
 u32 score = 0;
-u8 playerCol = 0;
+u8 playerCol = 1;
 u8 playerPos = 32;
 u8 player0Pos = 0;
 u8 player1Pos = 48;
@@ -253,6 +255,7 @@ void game_start() {
 int moveTick = 0;
 int spawnTicker = 0;
 int spawnTicks = 0;
+bool anim2Tick = false;
 
 void game_create_row(int row) {
     u8 max_walls = 1;
@@ -266,12 +269,6 @@ void game_create_row(int row) {
     gameRows[row].col1 = 0;
     gameRows[row].col2 = 0;
     
-    u8 banana = $random_range(0,5);
-    if (banana == 0) {
-        u8 column = $random_range(0,3);
-        gameRows[row].col0 = 1;
-    }
-
     u8 walls = $random_range(0,2);
     for (int i = 0; i < walls; i++) {
         u8 column = $random_range(0,3);
@@ -282,6 +279,13 @@ void game_create_row(int row) {
             case(2) gameRows[row].col2 = 2+color;
         }
     }
+
+    u8 banana = $random_range(0,4);
+    if (banana == 0) {
+        u8 column = $random_range(0,3);
+        gameRows[row].col0 = 1;
+    }
+
 }
 
 void game_update() {
@@ -290,6 +294,7 @@ void game_update() {
     if (millMove > moveTick) {
         milli = $millis();
         spawnTicker++;
+        anim2Tick = !anim2Tick;
         for (int i = 0; i < 5; i++) {
             if (gameRows[i].distance > 0) {
                 if (gameRows[i].distance <= 32) {
@@ -312,7 +317,7 @@ void game_update() {
     }
     
     // move the player
-    switch (playerPos) {
+    switch (playerCol) {
         case(0) update_player(player0Pos);
         case(1) update_player(player1Pos);
         case(2) update_player(player2Pos);
@@ -344,8 +349,8 @@ void game_setup()
     milli = $millis();
     spawnTicker = 20;
     spawnTicks = 32; 
-    moveTick = 100;
-    playerCol = 0;
+    moveTick = 200;
+    playerCol = 1;
     playerPos = player1Pos;
 }
 
@@ -377,16 +382,19 @@ void game_input() {
 void update_player(int dPos) {
     if (dPos != playerPos) {
         if (dPos < playerPos) {
-            playerPos--;
+            playerPos-=2;
         }
         else if (dPos > playerPos) {
-            playerPos++;
+            playerPos+=2;
         }
     }
 }
 
 void draw_player() {
-        $draw_filled_rect(playerPos,32,32,32,WHITE);
+    //$draw_filled_rect(playerPos,64,32,32,WHITE);
+    //$draw_filled_rect(playerPos,64,32,32,WHITE);
+    if (anim2Tick) { $draw_sprite(playerPos, 40, STEPL, 0); }
+    else { $draw_sprite(playerPos, 40, STEPR, 0); }
 }
 
 void game() {
@@ -424,12 +432,29 @@ void end_game_start() {
         $save();
     }
 }
-
+void draw_random_quote() {
+    // "Banana's can be black, red and blue"
+    // "Banana's aren't a tree, they're a big herb"
+    // "Banana's are a big herb"
+    // "You can eat the flower"
+    // "The trunk can be woven"
+    // "You can eat the trunk"
+    // "Banana skin helps reduce itching"
+    // "Once overripe, can be made into vingegar"
+    // "Once overripe, can be made into wine"
+    // "Can help reduce muscle spasms"
+    // "Scientific name is Musa Acuminata Colla"
+    // "A medium banana has about 15g of sugar"
+}
 void end_game() {
-
-    if ($just_pressed(A_BUTTON) || $just_pressed(B_BUTTON)) {
+    if ($just_pressed(A_BUTTON)) {
         screen = 0;
     }
+    if ($just_pressed(B_BUTTON)) {
+        screen = 0;
+    }
+
+    draw_random_quote();
 }
 
 void main()
