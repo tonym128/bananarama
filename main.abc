@@ -18,7 +18,7 @@ constexpr sprites BANANA32 = sprites{ 32x32 "media/banana32.png" };
 constexpr sprites STEPL = sprites{ 24x24 "media/monkey24sl.png" };
 constexpr sprites STEPR = sprites{ 24x24 "media/monkey24sr.png" };
 
-int screen = 4;
+int screen = 0;
 bool grow = 0;
 u32 milli = 0;
 saved bool save_exists;
@@ -29,6 +29,8 @@ u8 playerPos = 32;
 u8 player0Pos = 0;
 u8 player1Pos = 48;
 u8 player2Pos = 96;
+u32 scoreRow = 0;
+u32 currentRow = 0;
 
 struct banana {
     int x;
@@ -211,6 +213,8 @@ void game_start_setup()
 {
     screen++;
     score = 0;
+    scoreRow = 0;
+    currentRow = 0;
     milli = $millis();
 }
 
@@ -283,9 +287,27 @@ void game_create_row(int row) {
     u8 banana = $random_range(0,4);
     if (banana == 0) {
         u8 column = $random_range(0,3);
-        gameRows[row].col0 = 1;
+        switch (column) {
+            case(0) gameRows[row].col0 = 1;
+            case(1) gameRows[row].col1 = 1;
+            case(2) gameRows[row].col2 = 1;
+        }
     }
 
+}
+
+void game_hit_check(u8 item) {
+    if (item == 0) {return;}
+    else if (item == 1) {
+        if (scoreRow != currentRow) {
+            score++;
+            scoreRow = currentRow;
+            if (moveTick > 10) {
+                moveTick -= 10;
+                }
+            }
+        }
+    else {screen++;}
 }
 
 void game_update() {
@@ -293,6 +315,7 @@ void game_update() {
     u32 millMove = $millis() - milli;
     if (millMove > moveTick) {
         milli = $millis();
+        currentRow++;
         spawnTicker++;
         anim2Tick = !anim2Tick;
         for (int i = 0; i < 5; i++) {
@@ -305,7 +328,6 @@ void game_update() {
     }
 
     // Spawn new walls
-
     if (spawnTicker > spawnTicks) {
         spawnTicker = 0;
         for (int i = 0; i < 5; i++) {
@@ -323,8 +345,16 @@ void game_update() {
         case(2) update_player(player2Pos);
     }
 
-    // Check for any collisions
-    // TODO
+    // Check for any banana and wall hit
+    for (int i = 0; i < 5; i++) {
+        if (gameRows[i].distance == 0) {
+            switch (playerCol) {
+                case(0) game_hit_check(gameRows[i].col0);
+                case(1) game_hit_check(gameRows[i].col1);
+                case(2) game_hit_check(gameRows[i].col2);
+            }
+        }
+    }
 }
 
 void draw_row_col(int distance, int col, int val) {
@@ -434,7 +464,7 @@ void end_game_start() {
 }
 void draw_random_quote() {
     // "Banana's can be black, red and blue"
-    // "Banana's aren't a tree, they're a big herb"
+    // "Banana's aren't a tree"
     // "Banana's are a big herb"
     // "You can eat the flower"
     // "The trunk can be woven"
@@ -446,6 +476,7 @@ void draw_random_quote() {
     // "Scientific name is Musa Acuminata Colla"
     // "A medium banana has about 15g of sugar"
 }
+
 void end_game() {
     if ($just_pressed(A_BUTTON)) {
         screen = 0;
