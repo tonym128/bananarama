@@ -25,12 +25,10 @@ saved bool save_exists;
 saved u32 save_score;
 u32 score = 0;
 u8 playerCol = 1;
-u8 playerPos = 32;
+u8 playerPos = 52;
 u8 player0Pos = 0;
-u8 player1Pos = 48;
+u8 player1Pos = 52;
 u8 player2Pos = 96;
-u32 scoreRow = 0;
-u32 currentRow = 0;
 
 struct banana {
     int x;
@@ -44,12 +42,13 @@ struct banana {
 struct gameRow {
     u8 distance;
     u8 col0;
-    u8 col1;   
-    u8 col2;   
+    u8 col1;
+    u8 col2;
+    bool collected;
 };
 
 gameRow[5] gameRows = {
-{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},
+{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},{0,0,0,0,0},
 };
 
 banana[10] bananas = {
@@ -70,7 +69,7 @@ void drawBananas() {
         milli = $millis();
         grow = true;
     }
-    
+
     for (int i = 0; i<10; i++) {
         if (grow) {
             if (bananas[i].ds) {
@@ -79,7 +78,7 @@ void drawBananas() {
                 bananas[i].size += 1;
             }
         }
-        
+
         if (bananas[i].size == 7) {
             bananas[i].ds = 1;
             }
@@ -92,7 +91,7 @@ void drawBananas() {
         } else {
             bananas[i].x = bananas[i].x - 1;
         }
-        if (bananas[i].x > 128-16) { 
+        if (bananas[i].x > 128-16) {
             bananas[i].dx = !bananas[i].dx;
             bananas[i].x = 128-16;
         }
@@ -100,14 +99,14 @@ void drawBananas() {
             bananas[i].dx = !bananas[i].dx;
             bananas[i].x = 0;
         }
-    
+
         if (bananas[i].dy) {
             bananas[i].y = bananas[i].y + 1;
         } else {
             bananas[i].y = bananas[i].y - 1;
         }
 
-        if (bananas[i].y > 64-16) { 
+        if (bananas[i].y > 64-16) {
             bananas[i].dy = !bananas[i].dy;
             bananas[i].y = 64-16;
         }
@@ -115,7 +114,7 @@ void drawBananas() {
             bananas[i].dy = !bananas[i].dy;
             bananas[i].y = 0;
         }
-        
+
         switch (bananas[i].size) {
             case(0) $draw_sprite(bananas[i].x+14,bananas[i].y+14, BANANA4, 0);
             case(1) $draw_sprite(bananas[i].x+12,bananas[i].y+12, BANANA8, 0);
@@ -127,7 +126,7 @@ void drawBananas() {
             case(7) $draw_sprite(bananas[i].x,bananas[i].y, BANANA32, 0);
         }
     }
-    
+
     grow = false;
 }
 
@@ -144,11 +143,14 @@ void setup() {
         bananas[i].size = $random_range(0,8);
         bananas[i].ds = $random_range(0,2);
     }
+
+    $music_play(music{ "media/song2.mid" });
+    $tones_play_auto(tones{ C6 500 C7 100});
 }
 
 void main_menu_setup() {
     milli = 0;
-    screen++;
+    screen += 1;
 }
 
 void main_menu() {
@@ -170,7 +172,7 @@ void main_menu() {
 
 void draw_banana(u8 column, u8 distance)
 {
-    // distance goes from 32 far to 0 close
+    // distance goes from 32 far to 1 close, 0 not in use
     // column is value of 1,2,3
     int x = 32+distance;
     int y = distance;
@@ -184,7 +186,7 @@ void draw_banana(u8 column, u8 distance)
     else if (distance > 8) size = 5;
     else if (distance > 4) size = 6;
     else size = 7;
-    
+
     switch (size) {
         case(0) $draw_sprite((column-1)*sizeMod*2+sizeMod/2 + x, y+sizeMod, BANANA4, 0);
         case(1) $draw_sprite((column-1)*sizeMod*2+sizeMod/2 + x, y+sizeMod, BANANA8, 0);
@@ -195,7 +197,7 @@ void draw_banana(u8 column, u8 distance)
         case(6) $draw_sprite((column-1)*sizeMod*2+sizeMod/2 + x, y+sizeMod, BANANA28, 0);
         case(7) $draw_sprite((column-1)*sizeMod*2+sizeMod/2 + x, y+sizeMod, BANANA32, 0);
     }
-    
+
 }
 
 void draw_wall(u8 column, u8 distance, u8 color)
@@ -209,27 +211,25 @@ void draw_wall(u8 column, u8 distance, u8 color)
     $draw_filled_rect((column-1)*size + x,y,size,size,color);
 }
 
-void game_start_setup() 
+void game_start_setup()
 {
-    screen++;
+    screen += 1;
     score = 0;
-    scoreRow = 0;
-    currentRow = 0;
     milli = $millis();
 }
 
 void game_start() {
     u32 mill = $millis() - milli;
-    
+
     int seconds = mill/1000;
     int sizeX = 128 - (mill)%1000/8;
     int sizeY = sizeX/2;
- 
+
     int posX = (mill)%1000/16;
     int posY = posX/2;
 
     if (seconds >= 3) {
-        screen++;
+        screen += 1;
         milli = $millis();
         return;
     }
@@ -257,66 +257,86 @@ void game_start() {
 }
 
 int moveTick = 0;
+int moveCount = 0;
 int spawnTicker = 0;
 int spawnTicks = 0;
 bool anim2Tick = false;
 
-void game_create_row(int row) {
+void move_row(int src, int dst) {
+    gameRows[dst].distance = gameRows[src].distance;
+    gameRows[dst].col0 = gameRows[src].col0;
+    gameRows[dst].col1 = gameRows[src].col1;
+    gameRows[dst].col2 = gameRows[src].col2;
+    gameRows[dst].collected = gameRows[src].collected;
+}
+
+void game_create_row() {
     u8 max_walls = 1;
-    if (score > 20) {
+    if (score > 15) {
         max_walls = 2;
     }
-    
-    // gameRows[row] = {32,0,0,0};
-    gameRows[row].distance = 32;
-    gameRows[row].col0 = 0;
-    gameRows[row].col1 = 0;
-    gameRows[row].col2 = 0;
-    
-    u8 walls = $random_range(0,2);
+
+    move_row(1,0);
+    move_row(2,1);
+    move_row(3,2);
+    move_row(4,3);
+
+    gameRows[4].distance = 32;
+    gameRows[4].col0 = 0;
+    gameRows[4].col1 = 0;
+    gameRows[4].col2 = 0;
+    gameRows[4].collected = 0;
+
+    u8 walls = $random_range(0,max_walls+1);
     for (int i = 0; i < walls; i++) {
         u8 column = $random_range(0,3);
         u8 color = $random_range(0,3);
         switch (column) {
-            case(0) gameRows[row].col0 = 2+color;
-            case(1) gameRows[row].col1 = 2+color;
-            case(2) gameRows[row].col2 = 2+color;
+            case(0) gameRows[4].col0 = 2+color;
+            case(1) gameRows[4].col1 = 2+color;
+            case(2) gameRows[4].col2 = 2+color;
         }
     }
 
-    u8 banana = $random_range(0,4);
+    u8 banana = $random_range(0,2);
     if (banana == 0) {
         u8 column = $random_range(0,3);
         switch (column) {
-            case(0) gameRows[row].col0 = 1;
-            case(1) gameRows[row].col1 = 1;
-            case(2) gameRows[row].col2 = 1;
+            case(0) gameRows[4].col0 = 1;
+            case(1) gameRows[4].col1 = 1;
+            case(2) gameRows[4].col2 = 1;
         }
     }
 
 }
 
-void game_hit_check(u8 item) {
+void game_hit_check(u8 item, u8 row) {
     if (item == 0) {return;}
     else if (item == 1) {
-        if (scoreRow != currentRow) {
-            score++;
-            scoreRow = currentRow;
-            if (moveTick > 10) {
-                moveTick -= 10;
+        if (!gameRows[row].collected) {
+            gameRows[row].collected = 1;
+            score += 1;
+            if (score % 5 == 0) {
+                if (moveTick > 2) {
+                    moveTick -= 1;
+                }
+            }
+            if (score % 3 == 0) {
+                if (spawnTicks > 8) {
+                    spawnTicks -= 1;
                 }
             }
         }
-    else {screen++;}
+    }
+    else {screen += 1;}
 }
 
 void game_update() {
     // Move the walls
-    u32 millMove = $millis() - milli;
-    if (millMove > moveTick) {
-        milli = $millis();
-        currentRow++;
-        spawnTicker++;
+    moveCount += 1;
+    if (moveCount > moveTick) {
+        moveCount = 0;
+        spawnTicker += 1;
         anim2Tick = !anim2Tick;
         for (int i = 0; i < 5; i++) {
             if (gameRows[i].distance > 0) {
@@ -330,14 +350,9 @@ void game_update() {
     // Spawn new walls
     if (spawnTicker > spawnTicks) {
         spawnTicker = 0;
-        for (int i = 0; i < 5; i++) {
-            if (gameRows[i].distance == 0) {
-                game_create_row(i);
-                break;
-            }
-        }
+        game_create_row();
     }
-    
+
     // move the player
     switch (playerCol) {
         case(0) update_player(player0Pos);
@@ -347,11 +362,11 @@ void game_update() {
 
     // Check for any banana and wall hit
     for (int i = 0; i < 5; i++) {
-        if (gameRows[i].distance == 0) {
+        if (gameRows[i].distance == 1) {
             switch (playerCol) {
-                case(0) game_hit_check(gameRows[i].col0);
-                case(1) game_hit_check(gameRows[i].col1);
-                case(2) game_hit_check(gameRows[i].col2);
+                case(0) game_hit_check(gameRows[i].col0, i);
+                case(1) game_hit_check(gameRows[i].col1, i);
+                case(2) game_hit_check(gameRows[i].col2, i);
             }
         }
     }
@@ -366,20 +381,16 @@ void draw_row_col(int distance, int col, int val) {
     }
 }
 
-void game_setup() 
+void game_setup()
 {
-    $generate_random_seed();
-    $init_random_seed();
-    $set_frame_rate(30);
+    screen += 1;
 
-    screen++;
-    
     // Starting values
     score = 0;
-    milli = $millis();
+    moveCount = 0;
+    moveTick = 4;
     spawnTicker = 20;
-    spawnTicks = 32; 
-    moveTick = 200;
+    spawnTicks = 20;
     playerCol = 1;
     playerPos = player1Pos;
     for (int i = 0; i < 5; i++) {
@@ -389,14 +400,14 @@ void game_setup()
 
 void game_input() {
     // Take player input
-    bool canMove = true;
-    switch (playerPos) {
-        case(0) canMove = true;
-        case(48) canMove = true;
-        case(96) canMove = true;
-    }
+    //bool canMove = true;
+    //switch (playerPos) {
+    //    case(0) canMove = true;
+    //    case(52) canMove = true;
+    //    case(96) canMove = true;
+    //}
 
-    if (canMove) {
+    //if (canMove) {
         if ($just_pressed(LEFT_BUTTON)) {
             if (playerCol > 0) {
                 playerCol--;
@@ -404,10 +415,10 @@ void game_input() {
         }
         else if ($just_pressed(RIGHT_BUTTON)) {
             if (playerCol < 2) {
-                playerCol++;
+                playerCol += 1;
             }
         }
-    }
+    //}
 }
 
 void update_player(int dPos) {
@@ -429,12 +440,11 @@ void draw_player() {
 void game() {
     game_input();
     game_update();
-    
+
     // Draw Lanes
     $draw_sprite(0,0, BACKGROUND, 0);
 
     // Draw Rows
-    // TODO Some sort of display list sort
     for (int i = 0; i < 5; i++) {
         if (gameRows[i].distance > 0) {
             if (gameRows[i].distance <= 32) {
@@ -444,18 +454,18 @@ void game() {
             }
         }
     }
-    
+
     // Draw Player
     draw_player();
     // Draw Scores
     $set_text_color(DARK_GRAY);
     $draw_textf(1, 10,"Score:%d", score);
     $draw_textf(80, 10,"High:%d", save_score);
-    
+
 }
 
 void end_game_start() {
-    screen++;
+    screen += 1;
     if (score > save_score) {
         save_score = score;
         $save();
@@ -512,7 +522,7 @@ void main()
         save_exists = 1;
         save_score = 0;
     }
-        
+
     while(1) {
         switch (screen) {
             case(0) main_menu_setup();
@@ -525,5 +535,5 @@ void main()
             case(7) end_game();
         }
         $display();
-    }    
+    }
 }
