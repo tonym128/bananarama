@@ -6,7 +6,9 @@
 #sourceUrl "https://github.com/tonym128/bananarama"
 #shades "4"
 
-constexpr sprites BACKGROUND = sprites{ 128x64 "media/back.png" };
+constexpr sprites BACK_1 = sprites{ 128x32 "media/back_1a.png" };
+constexpr sprites BACK_2 = sprites{ 128x32 "media/back_2a.png" };
+constexpr sprites TREE = sprites{ 176x32 "media/tree.png" };
 constexpr sprites BANANA4 = sprites{ 4x4 "media/banana4.png" };
 constexpr sprites BANANA8 = sprites{ 8x8 "media/banana8.png" };
 constexpr sprites BANANA12 = sprites{ 12x12 "media/banana12.png" };
@@ -17,15 +19,24 @@ constexpr sprites BANANA28 = sprites{ 28x28 "media/banana28.png" };
 constexpr sprites BANANA32 = sprites{ 32x32 "media/banana32.png" };
 constexpr sprites STEPL = sprites{ 24x24 "media/monkey24sl.png" };
 constexpr sprites STEPR = sprites{ 24x24 "media/monkey24sr.png" };
+constexpr sprites A_BUTTON_1 = sprites{ 32x16 "media/a_button.png" };
+constexpr sprites A_BUTTON_2 = sprites{ 32x16 "media/a_button_2.png" };
+constexpr sprites B_BUTTON_1 = sprites{ 32x16 "media/b_button.png" };
+constexpr sprites B_BUTTON_2 = sprites{ 32x16 "media/b_button_2.png" };
 
 int screen = 0;
 bool grow = 0;
 u32 milli = 0;
+
+saved bool save_sfx;
+saved bool save_music;
 saved bool save_exists;
 saved u32 save_score;
+
 u32 score = 0;
 u8 playerCol = 1;
 u8 playerPos = 52;
+int treeX = -26;
 u8 player0Pos = 0;
 u8 player1Pos = 52;
 u8 player2Pos = 96;
@@ -143,9 +154,6 @@ void setup() {
         bananas[i].size = $random_range(0,8);
         bananas[i].ds = $random_range(0,2);
     }
-
-    $music_play(music{ "media/song2.mid" });
-    $tones_play_auto(tones{ C6 500 C7 100});
 }
 
 void main_menu_setup() {
@@ -161,12 +169,39 @@ void main_menu() {
     $draw_textf(1, 10,"High:%d", save_score);
 
     if ($millis()/1000 % 2 == 0) {
-        $set_text_color(LIGHT_GRAY);
-        $draw_text_P(16, 48,"Press A to Start");
+        $draw_sprite(96, 32, A_BUTTON_1, 0);
+    } else {
+        $draw_sprite(96, 32, A_BUTTON_2, 0);
+    }
+
+    if (save_music) {
+        $draw_sprite(96, 48, B_BUTTON_1, 0);
+    } else {
+        $draw_sprite(96, 48, B_BUTTON_2, 0);
     }
 
     if ($just_pressed(A_BUTTON)) {
         screen += 1;
+    }
+
+    if ($just_pressed(B_BUTTON)) {
+        save_music = !save_music;
+        save_sfx = save_music;
+        $save();
+        if (save_music) {
+            $audio_enabled();
+        } else
+        {
+            $audio_stop();
+        }
+    }
+
+    if (save_music && !$audio_playing()) {
+        $music_play(music{ "media/song1.mid" });
+    }
+
+    if(!save_music) {
+        $music_stop();
     }
 }
 
@@ -425,9 +460,11 @@ void update_player(int dPos) {
     if (dPos != playerPos) {
         if (dPos < playerPos) {
             playerPos-=2;
+            treeX+=1;
         }
         else if (dPos > playerPos) {
             playerPos+=2;
+            treeX-=1;
         }
     }
 }
@@ -442,10 +479,13 @@ void game() {
     game_update();
 
     // Draw Lanes
-    $draw_sprite(0,0, BACKGROUND, 0);
+    if (anim2Tick) { $draw_sprite(0, 32, BACK_1, 0); }
+    else { $draw_sprite(0, 32, BACK_2, 0); }
+
+    $draw_sprite(treeX, 0, TREE, 0);
 
     // Draw Rows
-    for (int i = 0; i < 5; i++) {
+    for (int i = 4; i >= 0; i--) {
         if (gameRows[i].distance > 0) {
             if (gameRows[i].distance <= 32) {
                 draw_row_col(gameRows[i].distance, 0, gameRows[i].col0);
@@ -521,6 +561,12 @@ void main()
     if (!$load()) {
         save_exists = 1;
         save_score = 0;
+        save_music = 1;
+        save_sfx = 1;
+    }
+
+    if (save_music) {
+        $audio_enabled();
     }
 
     while(1) {
