@@ -5,7 +5,7 @@
 
 Author  - Tony Mamacos
 
-Version - 0.9
+Version - 1.0
 
 URL     - https://community.arduboy.com/t/bananarama/12666
 
