@@ -349,6 +349,7 @@ void game_hit_check(u8 item, u8 row) {
     if (item == 0) {return;}
     else if (item == 1) {
         if (!gameRows[row].collected) {
+            $tones_play_auto(tones{ C6 100 E6 100 G6 100 });
             gameRows[row].collected = 1;
             score += 1;
             if (score % 5 == 0) {
@@ -363,7 +364,10 @@ void game_hit_check(u8 item, u8 row) {
             }
         }
     }
-    else {screen += 1;}
+    else {
+        $tones_play_auto(tones{ G6 200 E6 200 C6 400 });
+        screen += 1;
+        }
 }
 
 void game_update() {
@@ -557,7 +561,7 @@ void end_game() {
     drawBananas();
 
     $set_text_color(WHITE);
-    $draw_text_P(30, 32,"Bananarama");
+    $draw_text_P(15, 32,"Bananarama Fact");
 
     // Draw Scores
     $set_text_color(DARK_GRAY);
