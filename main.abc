@@ -200,7 +200,7 @@ void main_menu() {
         $music_play(music{ "media/song1.mid" });
     }
 
-    if(!save_music) {
+    if(!save_music && $audio_playing()) {
         $music_stop();
     }
 }
@@ -403,6 +403,20 @@ void game_update() {
                 case(1) game_hit_check(gameRows[i].col1, i);
                 case(2) game_hit_check(gameRows[i].col2, i);
             }
+        }
+    }
+
+    // Play music
+    if (save_music && !$audio_playing()) {
+        u8 song = score / 3;
+        if (song > 3) {
+            $music_play(music{ "media/song5.mid" });
+        } 
+        switch (song) {
+            case (0) $music_play(music{ "media/song1.mid" });
+            case (1) $music_play(music{ "media/song2.mid" });
+            case (2) $music_play(music{ "media/song3.mid" });
+            case (3) $music_play(music{ "media/song4.mid" });
         }
     }
 }
