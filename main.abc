@@ -442,6 +442,7 @@ void game_setup()
     screen += 1;
 
     // Starting values
+    treeX = -26;
     score = 0;
     moveCount = 0;
     moveTick = 4;
