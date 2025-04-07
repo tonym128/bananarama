@@ -17,7 +17,7 @@ Game Jam - https://community.arduboy.com/t/arduboy-banana-jam/12645
 
 ![Bananarama Logo](files/gameplay.gif)
 
-<iframe src="https://tiberiusbrown.github.io/Ardens/player.html?blah=https://github.com/tonym128/bananarama/raw/refs/heads/main/files/bananarama.arduboy" width="800" height="600" frameborder="0"></iframe>
+![Click to play Game](https://tiberiusbrown.github.io/Ardens/player.html?blah=https://github.com/tonym128/bananarama/raw/refs/heads/main/files/bananarama.arduboy)
 
 # Special Thanks
 
