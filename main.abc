@@ -1,7 +1,7 @@
 #title "Bananarama"
 #description "A runner game for the Arduboy Banana Game Jam"
 #author "Tony Mamacos"
-#version "0.1"
+#version "1.0"
 #url "https://community.arduboy.com/t/bananarama/12666"
 #sourceUrl "https://github.com/tonym128/bananarama"
 #shades "4"
@@ -276,17 +276,20 @@ void game_start() {
         case(0) {
             $draw_filled_rect(posX,posY,sizeX,sizeY, LIGHT_GRAY);
             $set_text_color(DARK_GRAY);
-            $draw_textf(60,36, "3");
+            $draw_sprite(16,16 , BANANA32, 0);
+            $draw_sprite(48,16 , BANANA32, 0);
+            $draw_sprite(72,16 , BANANA32, 0);
         }
         case(1) {
             $draw_filled_rect(posX,posY,sizeX,sizeY, DARK_GRAY);
             $set_text_color(LIGHT_GRAY);
-            $draw_textf(60,36, "2");
+            $draw_sprite(32,16 , BANANA32, 0);
+            $draw_sprite(64,16 , BANANA32, 0);
         }
         case(2) {
             $draw_filled_rect(posX,posY,sizeX,sizeY, DARK_GRAY);
             $set_text_color(WHITE);
-            $draw_textf(60,36, "1");
+            $draw_sprite(48,16 , BANANA32, 0);
         }
     }
 }
