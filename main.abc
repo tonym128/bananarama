@@ -1,7 +1,7 @@
 #title "Bananarama"
 #description "A runner game for the Arduboy Banana Game Jam"
 #author "Tony Mamacos"
-#version "1.1"
+#version "1.2"
 #url "https://community.arduboy.com/t/bananarama/12666"
 #sourceUrl "https://github.com/tonym128/bananarama"
 #shades "4"
