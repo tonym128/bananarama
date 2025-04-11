@@ -6,6 +6,7 @@
 #sourceUrl "https://github.com/tonym128/bananarama"
 #shades "4"
 
+constexpr sprites LOGO = sprites{ 128x14 "media/logo.png" };
 constexpr sprites BACK_1 = sprites{ 128x32 "media/back_1a.png" };
 constexpr sprites BACK_2 = sprites{ 128x32 "media/back_2a.png" };
 constexpr sprites TREE = sprites{ 176x32 "media/tree.png" };
@@ -162,9 +163,9 @@ void main_menu_setup() {
 }
 
 void main_menu() {
+
     drawBananas();
-    $set_text_color(WHITE);
-    $draw_text_P(30, 32,"Bananarama");
+    $draw_sprite(0,16, LOGO, 0);
     $set_text_color(DARK_GRAY);
     $draw_textf(1, 10,"High:%d", save_score);
 
